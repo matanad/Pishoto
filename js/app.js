@@ -17,7 +17,6 @@ const BALL_AUDIO = new Audio('audio/pishotoStrong.mp3')
 var gGamerGlued
 var gBallsInteval
 var gGlueInteval
-var gGlueTimeOut
 var gCurrBallsOnBoard
 var gCollectedBallsCount
 var gBallsAroundGamer
@@ -40,7 +39,7 @@ function onInitGame() {
     gGamerPos = { i: 2, j: 9 }
     gBoard = buildBoard()
     renderBoard(gBoard)
-    gBallsInteval = setInterval(addRandomBall, 5000)
+    gBallsInteval = setInterval(addRandomBall, 1300)
     gGlueInteval = setInterval(addGlue, 5000)
 }
 
@@ -51,16 +50,18 @@ function gameOver() {
 }
 
 function checkBallsAround() {
-    if (gBoard[gGamerPos.i][gGamerPos.j].isPassage) return
+    var iPos = gGamerPos.i
+    var jPos = gGamerPos.j
     var ballsCount = 0
 
-    for (var i = gGamerPos.i - 1; i <= gGamerPos.i + 1; i++) {
-        for (var j = gGamerPos.j - 1; j <= gGamerPos.j + 1; j++) {
-            if (gBoard[i][j].gameElement === BALL) {
-                ballsCount++
-            }
+    for (var i = iPos - 1; i <= iPos + 1; i++) {
+        if (i < 0 || i > gBoard.length - 1) continue
+        for (var j = jPos - 1; j <= jPos + 1; j++) {
+            if (j < 0 || j > gBoard.length - 1) continue
+            if (gBoard[i][j].gameElement === BALL) ballsCount++
         }
     }
+
     gBallsAroundGamer = ballsCount
     gElBallsAroundGamer.innerText = gBallsAroundGamer
 }
@@ -69,11 +70,11 @@ function buildBoard() {
     const board = []
     // DONE: Create the Matrix 10 * 12 
     // DONE: Put FLOOR everywhere and WALL at edges
+
     for (var i = 0; i < 10; i++) {
         board[i] = []
         for (var j = 0; j < 12; j++) {
             board[i][j] = { type: FLOOR, gameElement: null, isPassage: false }
-
 
             if (i === 0 || i === 9 || j === 0 || j === 11) {
                 if ((i === 0 && j === 5) || (i === 5 && j === 0) ||
@@ -95,38 +96,45 @@ function buildBoard() {
 }
 
 function addGlue() {
-    var locations = []
-    for (var i = 0; i < gBoard.length; i++) {
-        for (var j = 0; j < gBoard[i].length; j++) {
-            if (!gBoard[i][j].gameElement && gBoard[i][j].type === FLOOR) {
-                locations[i] = { i, j }
-            }
-        }
-    }
-    const randomCell = drawNum(locations)
-    var element = gBoard[randomCell.i][randomCell.j].gameElement
-    gBoard[randomCell.i][randomCell.j].gameElement = GLUE
-    renderCell(randomCell, GLUE_IMG)
+    var glueTimeOut
+    const randomLocation = renderAtRandomLocation(GLUE, GLUE_IMG)
     GLUE_AUDIO.play()
-    gGlueTimeOut = setTimeout(() => {
-        gBoard[randomCell.i][randomCell.j].gameElement = element
-        renderCell(randomCell, '')
+    glueTimeOut = setTimeout(() => {
+        if (gBoard[randomLocation.i][randomLocation.j].gameElement = GAMER){
+            clearTimeout(glueTimeOut)
+            return
+        }
+        gBoard[randomLocation.i][randomLocation.j].gameElement = null
+        renderCell(randomLocation, '')
+        clearTimeout(glueTimeOut)
     }, 3000);
 }
 
 function addRandomBall() {
+    renderAtRandomLocation(BALL, BALL_IMG)
+    gCurrBallsOnBoard++
+    checkBallsAround()
+}
+
+function getEmptyLocations() {
     var locations = []
     for (var i = 0; i < gBoard.length; i++) {
         for (var j = 0; j < gBoard[i].length; j++) {
             if (!gBoard[i][j].gameElement && gBoard[i][j].type === FLOOR) {
-                locations[i] = { i, j }
+                locations.push({ i, j })
             }
         }
     }
-    const randomCell = drawNum(locations)
-    gBoard[randomCell.i][randomCell.j].gameElement = BALL
-    renderCell(randomCell, BALL_IMG)
-    gCurrBallsOnBoard++
+    return locations[0] ? locations : null
+}
+
+function renderAtRandomLocation(element, img) {
+    var locations = getEmptyLocations()
+    if (!locations) return
+    const randomLocation = drawNum(locations)
+    gBoard[randomLocation.i][randomLocation.j].gameElement = element
+    renderCell(randomLocation, img)
+    return randomLocation
 }
 
 // Render the board to an HTML table
@@ -162,22 +170,23 @@ function renderBoard(board) {
 
 // Move the player to a specific location
 function moveTo(i, j) {
-    if (gGamerGlued) return 
+    if (gGamerGlued) return
     const isPassage = gBoard[gGamerPos.i][gGamerPos.j].isPassage
+    const iAbsDiff = Math.abs(i - gGamerPos.i)
+    const jAbsDiff = Math.abs(j - gGamerPos.j)
+    
     if (isPassage) {
-        if (i < 0) i = 9
-        if (i > 9) i = 0
-        if (j < 0) j = 11
-        if (j > 11) j = 0
+        if (i === -1) i = 9
+        if (i === gBoard.length) i = 0
+        if (j === -1) j = 11
+        if (j === gBoard[0].length) j = 0
     }
     const targetCell = gBoard[i][j]
-    
+
     if (targetCell.type === WALL) return
     // if (i < 0)  i = 10
 
-    // Calculate distance to make sure we are moving to a neighbor cell
-    const iAbsDiff = Math.abs(i - gGamerPos.i)
-    const jAbsDiff = Math.abs(j - gGamerPos.j)
+    // Calculate distance to make sure we are movin g to a neighbor cell
 
     // If the clicked Cell is one of the four allowed
     if ((isPassage && ((iAbsDiff === 9 && jAbsDiff === 0) || (iAbsDiff === 0 && jAbsDiff === 11)))
@@ -190,14 +199,13 @@ function moveTo(i, j) {
             if (gCurrBallsOnBoard === 0) {
                 gameOver()
             }
-        }else if (targetCell.gameElement === GLUE) {
+        } else if (targetCell.gameElement === GLUE) {
             gGamerGlued = true
             GLUED_AUDIO.play()
-            clearTimeout(gGlueTimeOut)
             setTimeout(() => {
                 gGamerGlued = false
             }, 3000);
-            
+
         }
 
         // DONE: Move the gamer
@@ -219,7 +227,7 @@ function moveTo(i, j) {
         checkBallsAround()
         // update DOM
         renderCell(gGamerPos, GAMER_IMG)
-        
+
 
     }
 
