@@ -100,8 +100,8 @@ function addGlue() {
     const randomLocation = renderAtRandomLocation(GLUE, GLUE_IMG)
     GLUE_AUDIO.play()
     glueTimeOut = setTimeout(() => {
-        if (gBoard[randomLocation.i][randomLocation.j].gameElement = GAMER){
-            renderCell(randomLocation, GAMER_IMG)
+        debugger
+        if (gBoard[randomLocation.i][randomLocation.j].gameElement === GAMER){
             clearTimeout(glueTimeOut)
             return
         }
@@ -200,7 +200,8 @@ function moveTo(i, j) {
             if (gCurrBallsOnBoard === 0) {
                 gameOver()
             }
-        } else if (targetCell.gameElement === GLUE) {
+        }
+        if (targetCell.gameElement === GLUE) {
             gGamerGlued = true
             GLUED_AUDIO.play()
             setTimeout(() => {

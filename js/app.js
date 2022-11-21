@@ -17,6 +17,7 @@ const BALL_AUDIO = new Audio('audio/pishotoStrong.mp3')
 var gGamerGlued
 var gBallsInteval
 var gGlueInteval
+var gGlueTimeOut
 var gCurrBallsOnBoard
 var gCollectedBallsCount
 var gBallsAroundGamer
@@ -50,15 +51,22 @@ function gameOver() {
 }
 
 function checkBallsAround() {
+    var ballsCount = 0
     var iPos = gGamerPos.i
     var jPos = gGamerPos.j
-    var ballsCount = 0
 
     for (var i = iPos - 1; i <= iPos + 1; i++) {
-        if (i < 0 || i > gBoard.length - 1) continue
         for (var j = jPos - 1; j <= jPos + 1; j++) {
-            if (j < 0 || j > gBoard.length - 1) continue
-            if (gBoard[i][j].gameElement === BALL) ballsCount++
+            if (gBoard[iPos][jPos].isPassage) {
+                if (i < 1) continue
+                if (i > 8) continue
+                if (j < 1) continue
+                if (j > 10) continue
+            }
+
+            if (gBoard[i][j].gameElement === BALL) {
+                ballsCount++
+            }
         }
     }
 
@@ -96,17 +104,11 @@ function buildBoard() {
 }
 
 function addGlue() {
-    var glueTimeOut
     const randomLocation = renderAtRandomLocation(GLUE, GLUE_IMG)
     GLUE_AUDIO.play()
-    glueTimeOut = setTimeout(() => {
-        if (gBoard[randomLocation.i][randomLocation.j].gameElement = GAMER){
-            clearTimeout(glueTimeOut)
-            return
-        }
+    gGlueTimeOut = setTimeout(() => {
         gBoard[randomLocation.i][randomLocation.j].gameElement = null
         renderCell(randomLocation, '')
-        clearTimeout(glueTimeOut)
     }, 3000);
 }
 
@@ -172,21 +174,20 @@ function renderBoard(board) {
 function moveTo(i, j) {
     if (gGamerGlued) return
     const isPassage = gBoard[gGamerPos.i][gGamerPos.j].isPassage
-    const iAbsDiff = Math.abs(i - gGamerPos.i)
-    const jAbsDiff = Math.abs(j - gGamerPos.j)
-    
     if (isPassage) {
-        if (i === -1) i = 9
-        if (i === gBoard.length) i = 0
-        if (j === -1) j = 11
-        if (j === gBoard[0].length) j = 0
+        if (i < 0) i = 9
+        if (i > 9) i = 0
+        if (j < 0) j = 11
+        if (j > 11) j = 0
     }
     const targetCell = gBoard[i][j]
 
     if (targetCell.type === WALL) return
     // if (i < 0)  i = 10
 
-    // Calculate distance to make sure we are movin g to a neighbor cell
+    // Calculate distance to make sure we are moving to a neighbor cell
+    const iAbsDiff = Math.abs(i - gGamerPos.i)
+    const jAbsDiff = Math.abs(j - gGamerPos.j)
 
     // If the clicked Cell is one of the four allowed
     if ((isPassage && ((iAbsDiff === 9 && jAbsDiff === 0) || (iAbsDiff === 0 && jAbsDiff === 11)))
@@ -202,6 +203,7 @@ function moveTo(i, j) {
         } else if (targetCell.gameElement === GLUE) {
             gGamerGlued = true
             GLUED_AUDIO.play()
+            clearTimeout(gGlueTimeOut)
             setTimeout(() => {
                 gGamerGlued = false
             }, 3000);
